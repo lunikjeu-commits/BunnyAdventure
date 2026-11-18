@@ -10,10 +10,6 @@ on:
           - debug
           - release
         default: debug
-  push:
-    branches: [main]
-    paths-ignore:
-      - "**.md"
 
 env:
   GODOT_VERSION: "4.3"
