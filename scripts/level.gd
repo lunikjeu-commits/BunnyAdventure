@@ -5,7 +5,7 @@ signal finished(stats)
 signal failed
 signal pause_requested
 
-const Gfx = preload("res://scripts/gfx.gd")
+const Art = preload("res://scripts/art.gd")
 const GS = preload("res://scripts/game_state.gd")
 const PlayerScript = preload("res://scripts/player.gd")
 const PlatformScript = preload("res://scripts/platform.gd")
@@ -52,6 +52,7 @@ var stats := {"coins": 0, "xp": 0, "kills": 0, "vegs": 0}
 var _done := false
 
 func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	var bg_layer := CanvasLayer.new()
 	bg_layer.layer = -10
 	add_child(bg_layer)
@@ -69,7 +70,7 @@ func _ready() -> void:
 		var px: float = pf[0]
 		var py: float = pf[1]
 		var pw: float = pf[2]
-		p.setup(Vector2(px, py), Vector2(pw, 24))
+		p.setup(Vector2(px, py), Vector2(pw, 56))
 		add_child(p)
 
 	for pk in PICKUPS:
@@ -208,57 +209,31 @@ func _on_died() -> void:
 func _draw() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 12345
+	var items := []
 	for g in GROUNDS:
 		var x: float = float(g[0]) + 220.0
 		var xe: float = float(g[1]) - 160.0
 		while x < xe:
-			match rng.randi_range(0, 3):
-				0:
-					_fence(x)
-				1:
-					_bush(x)
-				2:
-					_flowers(x)
-				3:
-					_tree(x)
-			x += rng.randf_range(170.0, 320.0)
-	_cave()
+			items.append([rng.randi_range(0, 3), x])
+			x += rng.randf_range(190.0, 330.0)
+	_sprite("cave", CAVE_X, 0.85)
+	for order in [3, 1, 0, 2]:
+		for it in items:
+			if int(it[0]) == order:
+				var x: float = it[1]
+				match order:
+					0:
+						_sprite("fence", x, 0.75)
+					1:
+						_sprite("bush", x, 0.7)
+					2:
+						_sprite("flowers", x, 0.7)
+					3:
+						_sprite("tree", x, 0.7)
 
-func _fence(x: float) -> void:
-	var wood := Color(0.62, 0.42, 0.24)
-	var dark := Color(0.45, 0.30, 0.17)
-	draw_rect(Rect2(x, GROUND_Y - 40, 110, 8), wood)
-	draw_rect(Rect2(x, GROUND_Y - 22, 110, 8), wood)
-	for i in 3:
-		var px := x + float(i) * 50.0
-		draw_rect(Rect2(px, GROUND_Y - 54, 12, 54), dark)
-		draw_colored_polygon(PackedVector2Array([Vector2(px, GROUND_Y - 54), Vector2(px + 6, GROUND_Y - 64), Vector2(px + 12, GROUND_Y - 54)]), dark)
-
-func _bush(x: float) -> void:
-	Gfx.ell(self, Vector2(x, GROUND_Y - 18), 48, 28, Color(0.22, 0.55, 0.25))
-	Gfx.ell(self, Vector2(x - 30, GROUND_Y - 12), 30, 20, Color(0.27, 0.62, 0.28))
-	Gfx.ell(self, Vector2(x + 32, GROUND_Y - 12), 32, 20, Color(0.27, 0.62, 0.28))
-
-func _flowers(x: float) -> void:
-	var cols := [Color(1, 0.4, 0.5), Color(1, 0.85, 0.3), Color(0.8, 0.5, 1)]
-	for i in 5:
-		var fx := x + float(i) * 18.0
-		var fh := 22.0 + float((i * 7) % 12)
-		draw_line(Vector2(fx, GROUND_Y), Vector2(fx, GROUND_Y - fh), Color(0.25, 0.6, 0.25), 3.0)
-		draw_circle(Vector2(fx, GROUND_Y - fh), 7.0, cols[i % 3])
-		draw_circle(Vector2(fx, GROUND_Y - fh), 3.0, Color(1, 0.95, 0.5))
-
-func _tree(x: float) -> void:
-	draw_rect(Rect2(x - 12, GROUND_Y - 120, 24, 120), Color(0.50, 0.33, 0.20))
-	Gfx.ell(self, Vector2(x, GROUND_Y - 160), 76, 62, Color(0.25, 0.60, 0.27))
-	Gfx.ell(self, Vector2(x - 40, GROUND_Y - 135), 46, 38, Color(0.30, 0.66, 0.30))
-	Gfx.ell(self, Vector2(x + 42, GROUND_Y - 138), 46, 38, Color(0.30, 0.66, 0.30))
-	draw_circle(Vector2(x - 20, GROUND_Y - 170), 7.0, Color(0.9, 0.2, 0.2))
-	draw_circle(Vector2(x + 28, GROUND_Y - 150), 7.0, Color(0.9, 0.2, 0.2))
-
-func _cave() -> void:
-	var c := Vector2(CAVE_X, GROUND_Y)
-	Gfx.ell(self, c + Vector2(0, -50), 120, 110, Color(0.45, 0.45, 0.50))
-	Gfx.ell(self, c + Vector2(-70, -20), 50, 40, Color(0.52, 0.52, 0.57))
-	Gfx.ell(self, c + Vector2(0, -42), 62, 74, Color(0.08, 0.06, 0.10))
-	draw_rect(Rect2(c.x - 70, c.y - 8, 140, 10), Color(0.36, 0.72, 0.28))
+func _sprite(name: String, x: float, k: float) -> void:
+	var t := Art.tex(name)
+	if t == null:
+		return
+	var sz := Vector2(float(t.get_width()), float(t.get_height())) * k
+	draw_texture_rect(t, Rect2(Vector2(x - sz.x * 0.5, GROUND_Y + 8.0 - sz.y), sz), false)
