@@ -1,5 +1,8 @@
 extends StaticBody2D
-# Plateforme / sol herbeux avec collision rectangulaire.
+# Sol / plateforme avec collision rectangulaire et texture d'herbe et de terre.
+
+const Art = preload("res://scripts/art.gd")
+const U := 0.75
 
 var size := Vector2(400, 40)
 
@@ -14,14 +17,35 @@ func setup(p: Vector2, s: Vector2) -> void:
 	add_child(cs)
 	queue_redraw()
 
-func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.45, 0.30, 0.18))
-	if size.y > 60.0:
-		draw_rect(Rect2(0, 16, size.x, 26), Color(0.40, 0.26, 0.15))
-	var gh := minf(16.0, size.y)
-	draw_rect(Rect2(0, 0, size.x, gh), Color(0.36, 0.72, 0.28))
-	draw_rect(Rect2(0, gh - 4.0, size.x, 4.0), Color(0.28, 0.58, 0.22))
-	var x := 12.0
+func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+
+func _strip(name: String, y: float) -> void:
+	var t := Art.tex(name)
+	if t == null:
+		return
+	var tw := float(t.get_width()) * U
+	var th := float(t.get_height()) * U
+	var x := 0.0
 	while x < size.x:
-		draw_line(Vector2(x, 1), Vector2(x + 3, -6), Color(0.36, 0.72, 0.28), 3.0)
-		x += 28.0
+		var w := minf(tw, size.x - x)
+		draw_texture_rect_region(t, Rect2(x, y, w, th), Rect2(0.0, 0.0, w / U, float(t.get_height())))
+		x += tw
+
+func _draw() -> void:
+	if size.y > 100.0:
+		var t := Art.tex("soil")
+		if t != null:
+			var tw := float(t.get_width()) * U
+			var y := 70.0
+			while y < size.y:
+				var h := minf(tw, size.y - y)
+				var x := 0.0
+				while x < size.x:
+					var w := minf(tw, size.x - x)
+					draw_texture_rect_region(t, Rect2(x, y, w, h), Rect2(0.0, 0.0, w / U, h / U))
+					x += tw
+				y += tw
+		_strip("ground_top", -15.0)
+	else:
+		_strip("plat_m", -15.0)
