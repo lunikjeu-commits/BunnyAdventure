@@ -4,18 +4,18 @@ extends CharacterBody2D
 
 signal killed(enemy)
 
-const Gfx = preload("res://scripts/gfx.gd")
+const Art = preload("res://scripts/art.gd")
 const GS = preload("res://scripts/game_state.gd")
 const GRAVITY := 1900.0
 const MAX_FALL := 1500.0
 
 const KINDS := {
 	"dog": {"hp": 30.0, "dmg": 10.0, "speed": 110.0, "chase": 200.0, "detect": 340.0,
-		"xp": 10, "coins": 3, "w": 58.0, "h": 44.0, "fly": false, "lvx": 440.0, "lvy": -120.0, "dodge": false},
+		"xp": 10, "coins": 3, "w": 70.0, "h": 50.0, "fly": false, "lvx": 440.0, "lvy": -120.0, "dodge": false},
 	"fox": {"hp": 50.0, "dmg": 14.0, "speed": 150.0, "chase": 270.0, "detect": 400.0,
-		"xp": 18, "coins": 5, "w": 62.0, "h": 46.0, "fly": false, "lvx": 500.0, "lvy": -340.0, "dodge": true},
+		"xp": 18, "coins": 5, "w": 74.0, "h": 50.0, "fly": false, "lvx": 500.0, "lvy": -340.0, "dodge": true},
 	"bird": {"hp": 20.0, "dmg": 8.0, "speed": 130.0, "chase": 210.0, "detect": 420.0,
-		"xp": 12, "coins": 4, "w": 46.0, "h": 36.0, "fly": true, "lvx": 0.0, "lvy": 0.0, "dodge": false},
+		"xp": 12, "coins": 4, "w": 52.0, "h": 44.0, "fly": true, "lvx": 0.0, "lvy": 0.0, "dodge": false},
 }
 
 enum State { PATROL, CHASE, RETURN }
@@ -71,6 +71,7 @@ func setup(k: String, pos: Vector2, rng: float, hp_mult: float = 1.0) -> void:
 	patrol_range = rng
 
 func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	collision_layer = 2
 	collision_mask = 1
 	add_to_group("enemies")
@@ -323,75 +324,29 @@ func _pop(text: String, col: Color) -> void:
 	tw.parallel().tween_property(l, "modulate:a", 0.0, 0.6)
 	tw.tween_callback(l.queue_free)
 
+const SPR := {
+	"dog": {"cols": 5, "cx": 180.0, "cy": 246.0, "cw": 360.0, "ch": 260.0},
+	"fox": {"cols": 5, "cx": 190.0, "cy": 246.0, "cw": 380.0, "ch": 260.0},
+	"bird": {"cols": 4, "cx": 150.0, "cy": 200.0, "cw": 300.0, "ch": 240.0},
+}
+
 func _draw() -> void:
+	var d: Dictionary = SPR[kind]
+	var u := 0.25
+	var fr := 0
+	if fly:
+		fr = int(_t * 14.0) % 4
+	elif _lunge_t > 0.0:
+		fr = 4
+	elif absf(velocity.x) > 15.0:
+		fr = int(_t * 9.0) % 4
+	if not fly:
+		Art.shadow(self, Vector2(0.0, 2.0), w * 0.75, 7.0, 0.28)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2(facing, 1.0))
-	match kind:
-		"dog":
-			_draw_dog()
-		"fox":
-			_draw_fox()
-		"bird":
-			_draw_bird()
+	var dest := Rect2(Vector2(-float(d["cx"]) * u, -float(d["cy"]) * u), Vector2(float(d["cw"]) * u, float(d["ch"]) * u))
+	Art.frame(self, kind, fr, int(d["cols"]), 1, dest)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if hp < max_hp:
 		var bw := 46.0
 		draw_rect(Rect2(-bw * 0.5, -h - 14.0, bw, 6.0), Color(0, 0, 0, 0.6))
 		draw_rect(Rect2(-bw * 0.5, -h - 14.0, bw * clampf(hp / max_hp, 0.0, 1.0), 6.0), Color(0.9, 0.25, 0.25))
-
-func _draw_dog() -> void:
-	var fur := Color(0.72, 0.48, 0.28)
-	var dark := Color(0.45, 0.28, 0.15)
-	var line := Color(0.28, 0.17, 0.1)
-	var run := 0.0
-	if absf(velocity.x) > 20.0:
-		run = sin(_t * 14.0) * 4.0
-	draw_line(Vector2(-24, -26), Vector2(-34, -38 + sin(_t * 10.0) * 4.0), fur, 6.0)
-	Gfx.ell_o(self, Vector2(-14 + run, -6), 6, 8, dark, line)
-	Gfx.ell_o(self, Vector2(14 - run, -6), 6, 8, dark, line)
-	Gfx.ell_o(self, Vector2(-2, -24), 28, 16, fur, line)
-	Gfx.ell_o(self, Vector2(26, -32), 15, 13, fur, line)
-	Gfx.ell_o(self, Vector2(38, -28), 9, 7, Color(0.9, 0.75, 0.55), line)
-	draw_circle(Vector2(44, -30), 3.0, Color(0.1, 0.08, 0.08))
-	Gfx.ell_o(self, Vector2(20, -38), 6, 11, dark, line, 2.0, 0.4)
-	draw_circle(Vector2(30, -35), 3.0, Color(0.1, 0.08, 0.08))
-	draw_circle(Vector2(31, -36), 1.0, Color(1, 1, 1))
-	if state == State.CHASE:
-		draw_line(Vector2(26, -41), Vector2(35, -38), Color(0.1, 0.08, 0.08), 2.5)
-
-func _draw_fox() -> void:
-	var fur := Color(0.95, 0.5, 0.15)
-	var dark := Color(0.4, 0.2, 0.1)
-	var line := Color(0.35, 0.17, 0.08)
-	var cream := Color(1.0, 0.95, 0.88)
-	var run := 0.0
-	if absf(velocity.x) > 20.0:
-		run = sin(_t * 16.0) * 5.0
-	Gfx.ell_o(self, Vector2(-34, -26 + sin(_t * 6.0) * 2.0), 18, 8, fur, line, 2.0, -0.5)
-	Gfx.ell(self, Vector2(-48, -33), 8, 6, cream, -0.5)
-	Gfx.ell_o(self, Vector2(-14 + run, -6), 5, 8, dark, line)
-	Gfx.ell_o(self, Vector2(16 - run, -6), 5, 8, dark, line)
-	Gfx.ell_o(self, Vector2(0, -24), 26, 14, fur, line)
-	Gfx.ell(self, Vector2(14, -20), 10, 8, cream)
-	draw_colored_polygon(PackedVector2Array([Vector2(18, -42), Vector2(20, -62), Vector2(30, -44)]), fur)
-	draw_colored_polygon(PackedVector2Array([Vector2(26, -43), Vector2(34, -62), Vector2(38, -40)]), fur)
-	draw_colored_polygon(PackedVector2Array([Vector2(21, -44), Vector2(21, -56), Vector2(28, -45)]), dark)
-	Gfx.ell_o(self, Vector2(28, -32), 14, 12, fur, line)
-	draw_colored_polygon(PackedVector2Array([Vector2(34, -36), Vector2(52, -30), Vector2(34, -25)]), cream)
-	draw_circle(Vector2(52, -30), 2.8, Color(0.1, 0.08, 0.08))
-	draw_circle(Vector2(31, -35), 3.0, Color(0.1, 0.08, 0.08))
-	draw_circle(Vector2(32, -36), 1.0, Color(1, 1, 1))
-	draw_line(Vector2(26, -41), Vector2(36, -37), Color(0.1, 0.08, 0.08), 2.5)
-
-func _draw_bird() -> void:
-	var blue := Color(0.35, 0.6, 0.95)
-	var dark := Color(0.22, 0.42, 0.8)
-	var line := Color(0.12, 0.25, 0.5)
-	var flap := sin(_t * 16.0)
-	draw_colored_polygon(PackedVector2Array([Vector2(-18, -16), Vector2(-34, -8), Vector2(-34, -24)]), dark)
-	Gfx.ell_o(self, Vector2(0, -18), 20, 16, blue, line)
-	Gfx.ell(self, Vector2(4, -12), 13, 8, Color(0.85, 0.93, 1.0))
-	draw_colored_polygon(PackedVector2Array([Vector2(-4, -22), Vector2(-20, -22 - 22.0 * flap), Vector2(8, -28)]), dark)
-	Gfx.ell_o(self, Vector2(16, -26), 10, 9, blue, line)
-	draw_colored_polygon(PackedVector2Array([Vector2(24, -27), Vector2(37, -23), Vector2(24, -20)]), Color(1.0, 0.8, 0.2))
-	draw_circle(Vector2(19, -28), 3.0, Color(0.1, 0.1, 0.12))
-	draw_circle(Vector2(20, -29), 1.0, Color(1, 1, 1))
