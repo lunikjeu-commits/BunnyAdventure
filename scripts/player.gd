@@ -38,6 +38,7 @@ var _attack_cd := 0.0
 var _throw_cd := 0.0
 
 func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	add_to_group("player")
 	collision_layer = 4
 	collision_mask = 1
@@ -211,9 +212,18 @@ func _special() -> void:
 		c.life = 2.2
 		get_parent().add_child(c)
 
+func _pose() -> String:
+	if _dead or _inv > 0.75:
+		return "hurt"
+	if _attack_t > 0.0:
+		return "attack"
+	if not is_on_floor():
+		if velocity.y < 0.0:
+			return "jump"
+		return "fall"
+	if absf(velocity.x) > 40.0:
+		return "run"
+	return "idle"
+
 func _draw() -> void:
-	var bob := 0.0
-	if is_on_floor() and absf(velocity.x) > 20.0:
-		bob = absf(sin(_t * 14.0)) * 4.0
-	var air := clampf(velocity.y / 900.0, -1.0, 1.0)
-	RabbitGfx.draw(self, Vector2.ZERO, facing, _stage, _t, bob, air, _attack_t, element)
+	RabbitGfx.draw(self, Vector2.ZERO, facing, _stage, _t, 0.0, 0.0, _attack_t, element, 1.0, _pose())
