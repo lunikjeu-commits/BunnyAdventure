@@ -2,6 +2,7 @@ extends Node2D
 # Projectile carotte : tout droit, marqué par l'élément du lapin.
 
 const GS = preload("res://scripts/game_state.gd")
+const Art = preload("res://scripts/art.gd")
 
 var vel := Vector2.ZERO
 var grav := 0.0
@@ -20,6 +21,7 @@ func setup(p: Vector2, v: Vector2, g: float = 0.0, el: String = "", dmg: float =
 	pierce = pc
 
 func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	add_to_group("carrots")
 
 func _physics_process(d: float) -> void:
@@ -36,7 +38,7 @@ func _physics_process(d: float) -> void:
 	if not space.intersect_ray(q).is_empty():
 		queue_free()
 		return
-	var r := Rect2(global_position - Vector2(16, 10), Vector2(32, 20))
+	var r := Rect2(global_position - Vector2(16, 12), Vector2(32, 24))
 	for e in get_tree().get_nodes_in_group("enemies"):
 		if _hit.has(e):
 			continue
@@ -50,18 +52,20 @@ func _physics_process(d: float) -> void:
 
 func _draw() -> void:
 	var c := GS.element_color(element)
-	var body := Color(1.0, 0.55, 0.1)
-	if element == "ice":
-		body = Color(0.65, 0.92, 1.0)
-	elif element == "electric":
-		body = Color(1.0, 0.95, 0.35)
-	if element != "":
-		draw_circle(Vector2.ZERO, 22, Color(c.r, c.g, c.b, 0.25))
-		draw_circle(Vector2.ZERO, 14, Color(c.r, c.g, c.b, 0.35))
+	var key := "n"
+	match element:
+		"fire":
+			key = "f"
+		"ice":
+			key = "i"
+		"electric":
+			key = "e"
+	var g := Art.tex("glow")
+	if element != "" and g != null:
+		draw_texture_rect(g, Rect2(-58, -44, 116, 88), false, Color(c.r, c.g, c.b, 0.55))
 		for i in 3:
-			draw_circle(Vector2(-34.0 - float(i) * 12.0, randf_range(-3.0, 3.0)), 7.0 - float(i) * 2.0, Color(c.r, c.g, c.b, 0.4 - float(i) * 0.1))
-	draw_colored_polygon(PackedVector2Array([Vector2(-14, -8), Vector2(20, 0), Vector2(-14, 8)]), body)
-	draw_line(Vector2(-6, -4), Vector2(-2, -1), Color(0.85, 0.4, 0.05), 2.0)
-	draw_line(Vector2(4, 2), Vector2(8, 0), Color(0.85, 0.4, 0.05), 2.0)
-	draw_colored_polygon(PackedVector2Array([Vector2(-14, 0), Vector2(-28, -9), Vector2(-22, 0)]), Color(0.3, 0.75, 0.25))
-	draw_colored_polygon(PackedVector2Array([Vector2(-14, 0), Vector2(-28, 9), Vector2(-22, 0)]), Color(0.25, 0.65, 0.2))
+			var a := 0.4 - float(i) * 0.1
+			draw_texture_rect(g, Rect2(-52.0 - float(i) * 24.0, -15.0 + randf_range(-3.0, 3.0), 30, 30), false, Color(c.r, c.g, c.b, a))
+	var t := Art.tex("carrot_" + key)
+	if t != null:
+		draw_texture_rect(t, Rect2(-32, -12, 64, 24), false)
