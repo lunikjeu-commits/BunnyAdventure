@@ -69,6 +69,17 @@ jobs:
           echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey" >> "$GITHUB_ENV"
           echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android" >> "$GITHUB_ENV"
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Générer les graphismes
+        run: |
+          set -e
+          pip install numpy pillow opencv-python-headless
+          python tools/make_art.py assets
+          ls -la assets
+
       - name: Importer les ressources
         run: |
           godot --headless --path . --import 2>&1 | tee import.log || true
